@@ -1,22 +1,26 @@
-using Microsoft.VisualBasic.ApplicationServices;
-using Microsoft.VisualBasic.Devices;
 using mkd2snesv2;
-using System;
 using System.Diagnostics;
-using System.Drawing.Drawing2D;
-using System.Net;
 using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using Timer = System.Windows.Forms.Timer;
 
 /*
  json format for locally saved times.
-ids for best laps and prs might be better for easy lookups.
+ids for best laps and prs might be better for easy lookups than just saving the time.
 
 {
     "MC1": {
+        "finished races": 5,
+        "attempts": 34,
+        "pr": {
+            "5lap": 97370,
+            "flap": 1620
+        },
+        "best laps": {
+            "lap1": 22860,
+            "lap2": 22860,
+            "lap3": 22860,
+            "lap4": 22860,
+            "lap5": 22860
+        },
         "races": [
             {
                 "id": 1,
@@ -26,18 +30,7 @@ ids for best laps and prs might be better for easy lookups.
                 "id": 2,
                 "character": "toad"
             }
-        ],
-        "best laps": {
-            "lap1": 22860,
-            "lap2": 22860,
-            "lap3": 22860,
-            "lap4": 22860,
-            "lap5": 22860
-        },
-        "pr": {
-            "5lap": 97370,
-            "flap": 1620
-        }
+        ]
     }
 }
  */
@@ -49,6 +42,14 @@ namespace smk_tt_tool
         private Snessocket Snessocket;
         private bool isAttached = false;
         private string deviceUse = "";
+        private string[] courses = {
+            "MC1", "DP1", "GV1", "BC1", "MC2",
+            "CI1", "GV2", "DP2", "BC2", "MC3",
+            "KB1", "CI2", "VL1", "BC3", "MC4",
+            "DP3", "KB2", "GV3", "VL2", "RR"
+        };
+        private string currentCourse = "MC3";
+        private int lastRaceOptions = 0xFF; //set to 0 for testing.
 
         public Form1()
         {
@@ -56,6 +57,8 @@ namespace smk_tt_tool
 
             Snessocket = new Snessocket();
             Snessocket.wsConnect();
+
+            CheckJson();
         }
         int Normalize(int value)
         {
@@ -93,6 +96,114 @@ namespace smk_tt_tool
             int cs2 = cs % 100;
 
             return $"{minutes}'{seconds:00}\"{cs2:00}";
+        }
+
+        private void CheckJson()
+        {
+            //check if the jsons exist. if they dont, make them.
+
+            foreach (var course in courses)
+            {
+                string filePath = $"data/{course}.json";
+                if (!Directory.Exists("data/"))
+                {
+                    Directory.CreateDirectory("data");
+                }
+
+                if (!File.Exists(filePath))
+                {
+                    var defaultData = new Dictionary<string, CourseData>
+                    {
+                        [course] = new CourseData
+                        {
+                            finishedraces = 0,
+                            attempts = 0,
+                            pr = new PersonalRecords { fivelap = 0, flap = 0 },
+                            bestlaps = new BestLaps { lap1 = 0, lap2 = 0, lap3 = 0, lap4 = 0, lap5 = 0 },
+                            races = new List<Race>()
+                        }
+                    };
+
+                    string json = JsonSerializer.Serialize(defaultData, new JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(filePath, json);
+                }
+            }
+        }
+
+        private void AddRaceToJson(string character, int racetime, int lap1, int lap2, int lap3, int lap4, int lap5)
+        {
+            /*
+             currently this crashes on the lap pr check if the json doesnt have any recorded races.
+
+             needs fixing.
+             */
+
+            var json = File.ReadAllText($"data/{currentCourse}.json");
+            var data = JsonSerializer.Deserialize<Dictionary<string, CourseData>>(json);
+
+            int[] laps = { lap1, lap2, lap3, lap4, lap5 };
+
+            var courseData = data[currentCourse];
+            var attempts = courseData.attempts;
+            courseData.races.Add(new Race
+            {
+                id = ++attempts,
+                character = character,
+                date = DateTime.Now,
+                racetime = racetime,
+                lap1 = lap1,
+                lap2 = lap2,
+                lap3 = lap3,
+                lap4 = lap4,
+                lap5 = lap5
+            });
+            courseData.attempts = attempts;
+
+            //check if full race was finished to update count. and potential prs.
+            if (lap5 > 0)
+            {
+                courseData.finishedraces++;
+
+                //update lap prs
+                if (lap1 < courseData.races[courseData.bestlaps.lap1 - 1].lap1 || courseData.bestlaps.lap1 == 0)
+                {
+                    courseData.bestlaps.lap1 = attempts;
+                }
+                if (lap2 < courseData.races[courseData.bestlaps.lap2 - 1].lap2 || courseData.bestlaps.lap2 == 0)
+                {
+                    courseData.bestlaps.lap2 = attempts;
+                }
+                if (lap3 < courseData.races[courseData.bestlaps.lap3 - 1].lap3 || courseData.bestlaps.lap3 == 0)
+                {
+                    courseData.bestlaps.lap3 = attempts;
+                }
+                if (lap4 < courseData.races[courseData.bestlaps.lap4 - 1].lap4 || courseData.bestlaps.lap4 == 0)
+                {
+                    courseData.bestlaps.lap4 = attempts;
+                }
+                if (lap5 < courseData.races[courseData.bestlaps.lap5 - 1].lap5 || courseData.bestlaps.lap5 == 0)
+                {
+                    courseData.bestlaps.lap5 = attempts;
+                }
+
+                //update fivelap
+                if (racetime < courseData.races[courseData.pr.fivelap - 1].racetime || courseData.pr.fivelap == 0)
+                {
+                    courseData.pr.fivelap = attempts;
+                }
+
+                //update flap
+                int[] lapsfromflaprace = { courseData.races[courseData.pr.flap - 1].lap1, courseData.races[courseData.pr.flap - 1].lap2, courseData.races[courseData.pr.flap - 1].lap3, courseData.races[courseData.pr.flap - 1].lap4, courseData.races[courseData.pr.flap - 1].lap5 };
+
+                if (laps.Min() < lapsfromflaprace.Min() || courseData.pr.flap == 0)
+                {
+                    courseData.pr.flap = attempts;
+                }
+            }
+
+            json = JsonSerializer.Serialize(data, new JsonSerializerOptions() { WriteIndented = true });
+            File.WriteAllText($"data/{currentCourse}.json", json);
+            Debug.WriteLine("dbg");
         }
 
         private void ReadMemory()
@@ -149,20 +260,39 @@ namespace smk_tt_tool
                 //current course
                 data = new byte[1];
                 data = Snessocket.GetAddress((0xF50000 + MemoryAddresses.ntsc["CurrentCourse"]), (uint)1);
-                string course = TrackNames.Map[data[0]];
+                currentCourse = TrackNames.Map[data[0]];
+
+                //retry/end screen
+                data = new byte[1];
+                data = Snessocket.GetAddress((0xF50000 + MemoryAddresses.ntsc["InRaceOptions"]), (uint)1);
+                int RaceOptions = data[0];
 
                 if (lapreached < 6 && formatted5 == "0'00\"00")
                 {
                     formatted5 = totalTime;
                 }
 
+                //check if at the retry screen is up and at least one lap was finished.
+                if (lastRaceOptions == 0x00 && RaceOptions == 0xFF && lapreached > 1)
+                {
+                    int finishtime = cs5;
+                    if (finishtime == 0)
+                    {
+                        finishtime = StrToCs(totalTime);
+                    }
+
+                    AddRaceToJson(racer, finishtime, lap1Split, lap2Split, lap3Split, lap4Split, lap5Split);
+                }
+
                 this.Invoke((Action)(() =>
                 {
-                    label4.Text = $"TRACK {course}";
+                    label4.Text = $"TRACK {currentCourse}";
                     label3.Text = $"RACER {racer}";
                     label2.Text = $"LAP {Math.Clamp(lapreached,0,5)}";
                     label1.Text =$"L1 {CsToStr(lap1Split)}\nL2 {CsToStr(lap2Split)}\nL3 {CsToStr(lap3Split)}\nL4 {CsToStr(lap4Split)}\nL5 {CsToStr(lap5Split)}\n\nTOTAL {formatted5}";
                 }));
+
+                lastRaceOptions = RaceOptions;
             }
         }
 
@@ -197,7 +327,7 @@ namespace smk_tt_tool
                 {
                     ReadMemory();
 
-                    await Task.Delay(1);
+                    await Task.Delay(10);
                 }
             });
         }
