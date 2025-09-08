@@ -1,11 +1,13 @@
 using Microsoft.VisualBasic.ApplicationServices;
 using Microsoft.VisualBasic.Devices;
+using mkd2snesv2;
 using System;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Timer = System.Windows.Forms.Timer;
 
@@ -21,7 +23,8 @@ namespace smk_tt_tool
         public Form1()
         {
             InitializeComponent();
-            _update_timer = new Timer() { Interval = 33 };
+
+            _update_timer = new Timer() { Interval = 11 };
             _update_timer.Tick += (sender, args) => ReadMemory();
             _update_timer.Enabled = true;
 
@@ -37,8 +40,9 @@ namespace smk_tt_tool
         {
             if (isAttached)
             {
+                Debug.WriteLine("reading memory");
                 var data = new byte[64];
-                data = Snessocket.GetAddress((0xF50000 + 0xF33), (uint)30);
+                data = Snessocket.GetAddress((0xF50000 + MemoryAddresses.ntsc["ttLapTimes"]), (uint)30);
 
                 // Lap 1
                 int lap1cs = Normalize(data[0]);
