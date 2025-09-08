@@ -11,22 +11,48 @@ using System.Threading;
 using System.Threading.Tasks;
 using Timer = System.Windows.Forms.Timer;
 
+/*
+ json format for locally saved times.
+ids for best laps and prs might be better for easy lookups.
+
+{
+    "MC1": {
+        "races": [
+            {
+                "id": 1,
+                "character": "bowser"
+            },
+            {
+                "id": 2,
+                "character": "toad"
+            }
+        ],
+        "best laps": {
+            "lap1": 22860,
+            "lap2": 22860,
+            "lap3": 22860,
+            "lap4": 22860,
+            "lap5": 22860
+        },
+        "pr": {
+            "5lap": 97370,
+            "flap": 1620
+        }
+    }
+}
+ */
+
 namespace smk_tt_tool
 {
     public partial class Form1 : Form
     {
         private Snessocket Snessocket;
-        private Timer _update_timer;
         private bool isAttached = false;
         private string deviceUse = "";
 
         public Form1()
         {
             InitializeComponent();
-
-            _update_timer = new Timer() { Interval = 11 };
-            _update_timer.Tick += (sender, args) => ReadMemory();
-            _update_timer.Enabled = true;
 
             Snessocket = new Snessocket();
             Snessocket.wsConnect();
@@ -36,66 +62,12 @@ namespace smk_tt_tool
             return (value == 0xFF) ? 0 : value;
         }
 
-        private void ReadMemory()
+        public string BytesToStr(int cs, int s, int m)
         {
-            if (isAttached)
-            {
-                Debug.WriteLine("reading memory");
-                var data = new byte[64];
-                data = Snessocket.GetAddress((0xF50000 + MemoryAddresses.ntsc["ttLapTimes"]), (uint)30);
-
-                // Lap 1
-                int lap1cs = Normalize(data[0]);
-                int lap1s = Normalize(data[1]);
-                int lap1m = Normalize(data[3]);
-                string formatted1 = $"{lap1m:X2}'{lap1s:X2}\"{lap1cs:X2}";
-
-                // Lap 2
-                int lap2cs = Normalize(data[6]);
-                int lap2s = Normalize(data[7]);
-                int lap2m = Normalize(data[9]);
-                string formatted2 = $"{lap2m:X2}'{lap2s:X2}\"{lap2cs:X2}";
-
-                // Lap 3
-                int lap3cs = Normalize(data[12]);
-                int lap3s = Normalize(data[13]);
-                int lap3m = Normalize(data[15]);
-                string formatted3 = $"{lap3m:X2}'{lap3s:X2}\"{lap3cs:X2}";
-
-                // Lap 4
-                int lap4cs = Normalize(data[18]);
-                int lap4s = Normalize(data[19]);
-                int lap4m = Normalize(data[21]);
-                string formatted4 = $"{lap4m:X2}'{lap4s:X2}\"{lap4cs:X2}";
-
-                // Lap 5
-                int lap5cs = Normalize(data[24]);
-                int lap5s = Normalize(data[25]);
-                int lap5m = Normalize(data[27]);
-                string formatted5 = $"{lap5m:X2}'{lap5s:X2}\"{lap5cs:X2}";
-
-                // Convert formatted strings into centiseconds
-                int cs1 = StrToCs(formatted1);
-                int cs2 = StrToCs(formatted2);
-                int cs3 = StrToCs(formatted3);
-                int cs4 = StrToCs(formatted4);
-                int cs5 = StrToCs(formatted5);
-
-                // Calculate split times (clamped at 0)
-                int lap1Split = Math.Max(0, cs1);
-                int lap2Split = Math.Max(0, cs2 - cs1);
-                int lap3Split = Math.Max(0, cs3 - cs2);
-                int lap4Split = Math.Max(0, cs4 - cs3);
-                int lap5Split = Math.Max(0, cs5 - cs4);
-
-                label1.Text =
-                    $"L1 {CsToStr(lap1Split)}\n" +
-                    $"L2 {CsToStr(lap2Split)}\n" +
-                    $"L3 {CsToStr(lap3Split)}\n" +
-                    $"L4 {CsToStr(lap4Split)}\n" +
-                    $"L5 {CsToStr(lap5Split)}\n\n" +
-                    $"LA {formatted5}";
-            }
+            int lapcs = Normalize(cs);
+            int laps = Normalize(s);
+            int lapm = Normalize(m);
+            return $"{lapm:X}'{laps:X2}\"{lapcs:X2}";
         }
         int StrToCs(string timeString)
         {
@@ -116,22 +88,82 @@ namespace smk_tt_tool
 
         string CsToStr(int cs)
         {
-            // Convert centiseconds into minutes, seconds, centiseconds
-            int centiseconds = cs % 100;
-            int totalSeconds = cs / 100;
-            int seconds = totalSeconds % 60;
-            int minutes = totalSeconds / 60;
+            int minutes = cs / 6000;
+            int seconds = (cs / 100) % 60;
+            int cs2 = cs % 100;
 
-            // Format minutes (always 2 digits)
-            string minS = minutes.ToString("00") + "'";
+            return $"{minutes}'{seconds:00}\"{cs2:00}";
+        }
 
-            // Format seconds (always 2 digits)
-            string secS = seconds.ToString("00") + "\"";
+        private void ReadMemory()
+        {
+            if (isAttached)
+            {
+                //lap times
+                var data = new byte[30];
+                data = Snessocket.GetAddress((0xF50000 + MemoryAddresses.ntsc["ttLapTimes"]), (uint)30);
+                
+                // Lap 1
+                string formatted1 = BytesToStr(data[0], data[1], data[3]);
+                int cs1 = StrToCs(formatted1);
 
-            // Format centiseconds (always 2 digits)
-            string csS = centiseconds.ToString("00");
+                // Lap 2
+                string formatted2 = BytesToStr(data[6], data[7], data[9]);
+                int cs2 = StrToCs(formatted2);
 
-            return minS + secS + csS;
+                // Lap 3
+                string formatted3 = BytesToStr(data[12], data[13], data[15]);
+                int cs3 = StrToCs(formatted3);
+
+                // Lap 4
+                string formatted4 = BytesToStr(data[18], data[19], data[21]);
+                int cs4 = StrToCs(formatted4);
+
+                // Lap 5
+                string formatted5 = BytesToStr(data[24], data[25], data[27]);
+                int cs5 = StrToCs(formatted5);
+
+                // Calculate split times (clamped at 0)
+                int lap1Split = Math.Max(0, cs1);
+                int lap2Split = Math.Max(0, cs2 - cs1);
+                int lap3Split = Math.Max(0, cs3 - cs2);
+                int lap4Split = Math.Max(0, cs4 - cs3);
+                int lap5Split = Math.Max(0, cs5 - cs4);
+
+                //lap count
+                data = new byte[1];
+                data = Snessocket.GetAddress((0xF50000 + MemoryAddresses.ntsc["LapReachedP1"]), (uint)1);
+
+                int lapreached = data[0] - 127;
+
+                //race timer
+                data = new byte[10];
+                data = Snessocket.GetAddress((0xF50000 + MemoryAddresses.ntsc["RaceTimer"]), (uint)10);
+                string totalTime = BytesToStr(data[0], data[1], data[3]);
+
+                //player 1 racer
+                data = new byte[1];
+                data = Snessocket.GetAddress((0xF50000 + MemoryAddresses.ntsc["P1Racer"]), (uint)1);
+                string racer = DriverNames.Map[data[0]];
+
+                //current course
+                data = new byte[1];
+                data = Snessocket.GetAddress((0xF50000 + MemoryAddresses.ntsc["CurrentCourse"]), (uint)1);
+                string course = TrackNames.Map[data[0]];
+
+                if (lapreached < 6 && formatted5 == "0'00\"00")
+                {
+                    formatted5 = totalTime;
+                }
+
+                this.Invoke((Action)(() =>
+                {
+                    label4.Text = $"TRACK {course}";
+                    label3.Text = $"RACER {racer}";
+                    label2.Text = $"LAP {Math.Clamp(lapreached,0,5)}";
+                    label1.Text =$"L1 {CsToStr(lap1Split)}\nL2 {CsToStr(lap2Split)}\nL3 {CsToStr(lap3Split)}\nL4 {CsToStr(lap4Split)}\nL5 {CsToStr(lap5Split)}\n\nTOTAL {formatted5}";
+                }));
+            }
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -156,5 +188,18 @@ namespace smk_tt_tool
             }
         }
 
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            //thread memory reading and such so the gui wont get interrupted constantly.
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    ReadMemory();
+
+                    await Task.Delay(1);
+                }
+            });
+        }
     }
 }
