@@ -2,39 +2,6 @@ using mkd2snesv2;
 using System.Diagnostics;
 using System.Text.Json;
 
-/*
- json format for locally saved times.
-ids for best laps and prs might be better for easy lookups than just saving the time.
-
-{
-    "MC1": {
-        "finished races": 5,
-        "attempts": 34,
-        "pr": {
-            "5lap": 97370,
-            "flap": 1620
-        },
-        "best laps": {
-            "lap1": 22860,
-            "lap2": 22860,
-            "lap3": 22860,
-            "lap4": 22860,
-            "lap5": 22860
-        },
-        "races": [
-            {
-                "id": 1,
-                "character": "bowser"
-            },
-            {
-                "id": 2,
-                "character": "toad"
-            }
-        ]
-    }
-}
- */
-
 namespace smk_tt_tool
 {
     public partial class Form1 : Form
@@ -159,43 +126,49 @@ namespace smk_tt_tool
             });
             courseData.attempts = attempts;
 
-            //check if full race was finished to update count. and potential prs.
+            //check if race was finished to update count. and potential prs.
             if (lap5 > 0)
             {
                 courseData.finishedraces++;
 
-                //update lap prs
-                if (lap1 < courseData.races[courseData.bestlaps.lap1 - 1].lap1 || courseData.bestlaps.lap1 == 0)
+                //update best lap splits
+                for (int i = 0; i < 5; i++)
                 {
-                    courseData.bestlaps.lap1 = attempts;
-                }
-                if (lap2 < courseData.races[courseData.bestlaps.lap2 - 1].lap2 || courseData.bestlaps.lap2 == 0)
-                {
-                    courseData.bestlaps.lap2 = attempts;
-                }
-                if (lap3 < courseData.races[courseData.bestlaps.lap3 - 1].lap3 || courseData.bestlaps.lap3 == 0)
-                {
-                    courseData.bestlaps.lap3 = attempts;
-                }
-                if (lap4 < courseData.races[courseData.bestlaps.lap4 - 1].lap4 || courseData.bestlaps.lap4 == 0)
-                {
-                    courseData.bestlaps.lap4 = attempts;
-                }
-                if (lap5 < courseData.races[courseData.bestlaps.lap5 - 1].lap5 || courseData.bestlaps.lap5 == 0)
-                {
-                    courseData.bestlaps.lap5 = attempts;
+                    //if no best lap exists (=0) or is lower than new lap
+                    if (courseData.bestlaps[i] == 0)
+                    {
+                        courseData.bestlaps[i] = attempts;
+                    }
+                    else if (laps[i] < courseData.races[courseData.bestlaps[i] - 1])
+                    {
+                        courseData.bestlaps[i] = attempts;
+                    }
                 }
 
                 //update fivelap
-                if (racetime < courseData.races[courseData.pr.fivelap - 1].racetime || courseData.pr.fivelap == 0)
+                if (courseData.pr.fivelap != 0)
+                {
+                    if (racetime < courseData.races[courseData.pr.fivelap - 1].racetime)
+                    {
+                        courseData.pr.fivelap = attempts;
+                    }
+                } else
                 {
                     courseData.pr.fivelap = attempts;
                 }
 
                 //update flap
-                int[] lapsfromflaprace = { courseData.races[courseData.pr.flap - 1].lap1, courseData.races[courseData.pr.flap - 1].lap2, courseData.races[courseData.pr.flap - 1].lap3, courseData.races[courseData.pr.flap - 1].lap4, courseData.races[courseData.pr.flap - 1].lap5 };
+                if (courseData.pr.flap != 0)
+                {
+                    //get all laps from the race with the flap
+                    int[] lapsfromflaprace = { courseData.races[courseData.pr.flap - 1].lap1, courseData.races[courseData.pr.flap - 1].lap2, courseData.races[courseData.pr.flap - 1].lap3, courseData.races[courseData.pr.flap - 1].lap4, courseData.races[courseData.pr.flap - 1].lap5 };
 
-                if (laps.Min() < lapsfromflaprace.Min() || courseData.pr.flap == 0)
+                    if (laps.Min() < lapsfromflaprace.Min())
+                    {
+                        courseData.pr.flap = attempts;
+                    }
+                }
+                else
                 {
                     courseData.pr.flap = attempts;
                 }
@@ -203,7 +176,6 @@ namespace smk_tt_tool
 
             json = JsonSerializer.Serialize(data, new JsonSerializerOptions() { WriteIndented = true });
             File.WriteAllText($"data/{currentCourse}.json", json);
-            Debug.WriteLine("dbg");
         }
 
         private void ReadMemory()
