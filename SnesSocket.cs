@@ -31,7 +31,7 @@ namespace smk_tt_tool
 
         public bool wsConnect()
         {
-            var token = new CancellationTokenSource(100);
+            var token = new CancellationTokenSource(3000);
             ws.ConnectAsync(new Uri("ws://localhost:23074"), token.Token).GetAwaiter().GetResult();
             return ws.State == WebSocketState.Open;
         }

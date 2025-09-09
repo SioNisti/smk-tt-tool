@@ -21,10 +21,6 @@ namespace smk_tt_tool
         public Form1()
         {
             InitializeComponent();
-
-            Snessocket = new Snessocket();
-            Snessocket.wsConnect();
-
             CheckJson();
         }
         int Normalize(int value)
@@ -129,19 +125,25 @@ namespace smk_tt_tool
             //check if race was finished to update count. and potential prs.
             if (lap5 > 0)
             {
+                Debug.WriteLine("dbg1");
                 courseData.finishedraces++;
 
+                int x = 0;
+                int[] bestlaps = { courseData.bestlaps.lap1, courseData.bestlaps.lap2, courseData.bestlaps.lap3, courseData.bestlaps.lap4, courseData.bestlaps.lap5 };
+                int[] joku = { courseData.races[bestlaps[x] - 1].lap1, courseData.races[bestlaps[x] - 1].lap2, courseData.races[bestlaps[x] - 1].lap3, courseData.races[bestlaps[x] - 1].lap4, courseData.races[bestlaps[x] - 1].lap5};
+                
                 //update best lap splits
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < bestlaps.Length; i++)
                 {
+                    x = i;
                     //if no best lap exists (=0) or is lower than new lap
-                    if (courseData.bestlaps[i] == 0)
+                    if (bestlaps[i] == 0)
                     {
-                        courseData.bestlaps[i] = attempts;
+                        bestlaps[i] = attempts;
                     }
-                    else if (laps[i] < courseData.races[courseData.bestlaps[i] - 1])
+                    else if (laps[i] < joku[i])
                     {
-                        courseData.bestlaps[i] = attempts;
+                        bestlaps[i] = attempts;
                     }
                 }
 
@@ -292,6 +294,9 @@ namespace smk_tt_tool
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            Snessocket = new Snessocket();
+            Snessocket.wsConnect();
+
             //thread memory reading and such so the gui wont get interrupted constantly.
             Task.Run(async () =>
             {
