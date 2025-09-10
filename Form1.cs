@@ -1,5 +1,6 @@
 using mkd2snesv2;
 using System.Diagnostics;
+using System.Net.NetworkInformation;
 using System.Text.Json;
 
 namespace smk_tt_tool
@@ -79,11 +80,11 @@ namespace smk_tt_tool
                     {
                         [course] = new CourseData
                         {
-                            finishedraces = 0,
-                            attempts = 0,
-                            pr = new PersonalRecords { fivelap = 0, flap = 0 },
-                            bestlaps = new BestLaps { lap1 = 0, lap2 = 0, lap3 = 0, lap4 = 0, lap5 = 0 },
-                            races = new List<Race>()
+                            Finishedraces = 0,
+                            Attempts = 0,
+                            Pr = new PersonalRecords { Fivelap = 0, Flap = 0 },
+                            Bestlaps = [0, 0, 0, 0, 0],
+                            Races = new List<Race>()
                         }
                     };
 
@@ -93,86 +94,99 @@ namespace smk_tt_tool
             }
         }
 
+        private string CompareLapFromJson(int id, int lapid, int comp)
+        {
+            var json = File.ReadAllText($"data/{currentCourse}.json");
+            var data = JsonSerializer.Deserialize<Dictionary<string, CourseData>>(json);
+            var courseData = data[currentCourse];
+            string result = "";
+
+            if (courseData.Races.Count > 0)
+            {
+                int diff = Math.Abs(courseData.Races[id - 1].Laps[lapid] - comp);
+                if (courseData.Races[id - 1].Laps[lapid] < comp)
+                {
+                    result += "+";
+                }
+                else if (diff == courseData.Races[id - 1].Laps[lapid])
+                {
+                    diff = 0;
+                }
+                else
+                {
+                    result += "-";
+                }
+                result += CsToStr(diff);
+                return result;
+            }
+            else
+            {
+                return $"{CsToStr(0)}";
+            }
+        }
+
         private void AddRaceToJson(string character, int racetime, int lap1, int lap2, int lap3, int lap4, int lap5)
         {
-            /*
-             currently this crashes on the lap pr check if the json doesnt have any recorded races.
-
-             needs fixing.
-             */
-
             var json = File.ReadAllText($"data/{currentCourse}.json");
             var data = JsonSerializer.Deserialize<Dictionary<string, CourseData>>(json);
 
             int[] laps = { lap1, lap2, lap3, lap4, lap5 };
 
             var courseData = data[currentCourse];
-            var attempts = courseData.attempts;
-            courseData.races.Add(new Race
+            var attempts = courseData.Attempts;
+            courseData.Races.Add(new Race
             {
-                id = ++attempts,
-                character = character,
-                date = DateTime.Now,
-                racetime = racetime,
-                lap1 = lap1,
-                lap2 = lap2,
-                lap3 = lap3,
-                lap4 = lap4,
-                lap5 = lap5
+                Id = ++attempts,
+                Character = character,
+                Date = DateTime.Now,
+                Racetime = racetime,
+                Laps = [lap1, lap2, lap3, lap4, lap5]
             });
-            courseData.attempts = attempts;
+            courseData.Attempts = attempts;
 
             //check if race was finished to update count. and potential prs.
             if (lap5 > 0)
             {
-                Debug.WriteLine("dbg1");
-                courseData.finishedraces++;
+                courseData.Finishedraces++;
 
-                int x = 0;
-                int[] bestlaps = { courseData.bestlaps.lap1, courseData.bestlaps.lap2, courseData.bestlaps.lap3, courseData.bestlaps.lap4, courseData.bestlaps.lap5 };
-                int[] joku = { courseData.races[bestlaps[x] - 1].lap1, courseData.races[bestlaps[x] - 1].lap2, courseData.races[bestlaps[x] - 1].lap3, courseData.races[bestlaps[x] - 1].lap4, courseData.races[bestlaps[x] - 1].lap5};
-                
                 //update best lap splits
-                for (int i = 0; i < bestlaps.Length; i++)
+                for (int i = 0; i < courseData.Bestlaps.Length; i++)
                 {
-                    x = i;
                     //if no best lap exists (=0) or is lower than new lap
-                    if (bestlaps[i] == 0)
+                    if (courseData.Bestlaps[i] == 0)
                     {
-                        bestlaps[i] = attempts;
+                        courseData.Bestlaps[i] = attempts;
                     }
-                    else if (laps[i] < joku[i])
+                    else if (laps[i] < courseData.Races[courseData.Bestlaps[i] - 1].Laps[i])
                     {
-                        bestlaps[i] = attempts;
+                        courseData.Bestlaps[i] = attempts;
                     }
                 }
 
                 //update fivelap
-                if (courseData.pr.fivelap != 0)
+                if (courseData.Pr.Fivelap != 0)
                 {
-                    if (racetime < courseData.races[courseData.pr.fivelap - 1].racetime)
+                    if (racetime < courseData.Races[courseData.Pr.Fivelap - 1].Racetime)
                     {
-                        courseData.pr.fivelap = attempts;
-                    }
-                } else
-                {
-                    courseData.pr.fivelap = attempts;
-                }
-
-                //update flap
-                if (courseData.pr.flap != 0)
-                {
-                    //get all laps from the race with the flap
-                    int[] lapsfromflaprace = { courseData.races[courseData.pr.flap - 1].lap1, courseData.races[courseData.pr.flap - 1].lap2, courseData.races[courseData.pr.flap - 1].lap3, courseData.races[courseData.pr.flap - 1].lap4, courseData.races[courseData.pr.flap - 1].lap5 };
-
-                    if (laps.Min() < lapsfromflaprace.Min())
-                    {
-                        courseData.pr.flap = attempts;
+                        courseData.Pr.Fivelap = attempts;
                     }
                 }
                 else
                 {
-                    courseData.pr.flap = attempts;
+                    courseData.Pr.Fivelap = attempts;
+                }
+
+                //update flap
+                if (courseData.Pr.Flap != 0)
+                {
+                    if (laps.Min() < courseData.Races[courseData.Pr.Flap - 1].Laps.Min())
+                    {
+                        courseData.Pr.Flap = attempts;
+                    }
+                }
+                else
+                {
+                    courseData.Pr.Flap = attempts;
                 }
             }
 
@@ -187,7 +201,7 @@ namespace smk_tt_tool
                 //lap times
                 var data = new byte[30];
                 data = Snessocket.GetAddress((0xF50000 + MemoryAddresses.ntsc["ttLapTimes"]), (uint)30);
-                
+
                 // Lap 1
                 string formatted1 = BytesToStr(data[0], data[1], data[3]);
                 int cs1 = StrToCs(formatted1);
@@ -209,11 +223,7 @@ namespace smk_tt_tool
                 int cs5 = StrToCs(formatted5);
 
                 // Calculate split times (clamped at 0)
-                int lap1Split = Math.Max(0, cs1);
-                int lap2Split = Math.Max(0, cs2 - cs1);
-                int lap3Split = Math.Max(0, cs3 - cs2);
-                int lap4Split = Math.Max(0, cs4 - cs3);
-                int lap5Split = Math.Max(0, cs5 - cs4);
+                int[] LapSplits = { Math.Max(0, cs1), Math.Max(0, cs2 - cs1), Math.Max(0, cs3 - cs2), Math.Max(0, cs4 - cs3), Math.Max(0, cs5 - cs4) };
 
                 //lap count
                 data = new byte[1];
@@ -255,15 +265,44 @@ namespace smk_tt_tool
                         finishtime = StrToCs(totalTime);
                     }
 
-                    AddRaceToJson(racer, finishtime, lap1Split, lap2Split, lap3Split, lap4Split, lap5Split);
+                    AddRaceToJson(racer, finishtime, LapSplits[0], LapSplits[1], LapSplits[2], LapSplits[3], LapSplits[4]);
+                }
+
+                string lapdeltas = "";
+
+                //segment delta from 5lap pr
+                //only get 5lap pr deltas if not in retry screen
+                if (lastRaceOptions == 0x00)
+                {
+                    var json = File.ReadAllText($"data/{currentCourse}.json");
+                    var jsondata = JsonSerializer.Deserialize<Dictionary<string, CourseData>>(json);
+                    var courseData = jsondata[currentCourse];
+
+                    for (int i = 0; i < 5; i++)
+                    {
+                        lapdeltas += $"{CompareLapFromJson(courseData.Pr.Fivelap, i, LapSplits[i])}\n";
+                    }
+                    if (lapreached > 5)
+                    {
+                        int totaldelta = Math.Abs(courseData.Races[courseData.Pr.Fivelap-1].Racetime - cs5);
+                        if (courseData.Races[courseData.Pr.Fivelap - 1].Racetime < cs5)
+                        {
+                            lapdeltas += "\n+";
+                        } else
+                        {
+                            lapdeltas += "\n-";
+                        }
+                            lapdeltas += $"{CsToStr(totaldelta)}";
+                    }
                 }
 
                 this.Invoke((Action)(() =>
                 {
-                    label4.Text = $"TRACK {currentCourse}";
-                    label3.Text = $"RACER {racer}";
-                    label2.Text = $"LAP {Math.Clamp(lapreached,0,5)}";
-                    label1.Text =$"L1 {CsToStr(lap1Split)}\nL2 {CsToStr(lap2Split)}\nL3 {CsToStr(lap3Split)}\nL4 {CsToStr(lap4Split)}\nL5 {CsToStr(lap5Split)}\n\nTOTAL {formatted5}";
+                    label5.Text = lapdeltas;
+                    label4.Text = $"{currentCourse}";
+                    label3.Text = $"{racer}";
+                    label2.Text = $"LAP {Math.Clamp(lapreached, 0, 5)}";
+                    label1.Text = $"L1 {CsToStr(LapSplits[0])}\nL2 {CsToStr(LapSplits[1])}\nL3 {CsToStr(LapSplits[2])}\nL4 {CsToStr(LapSplits[3])}\nL5 {CsToStr(LapSplits[4])}\n\nTOTAL {formatted5}";
                 }));
 
                 lastRaceOptions = RaceOptions;
