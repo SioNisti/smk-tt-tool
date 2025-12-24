@@ -14,8 +14,8 @@ namespace smk_tt_tool
             [0x2] = "Luigi",
             [0x4] = "Bowser",
             [0x6] = "Princess",
-            [0x8] = "Donkey Kong Jr.",
-            [0xa] = "Koopa Troopa",
+            [0x8] = "DK Jr.",
+            [0xa] = "Koopa",
             [0xc] = "Toad",
             [0xe] = "Yoshi",
         };

@@ -2,11 +2,22 @@ using mkd2snesv2;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
 using System.Text.Json;
+using System.Runtime.InteropServices;
 
 namespace smk_tt_tool
 {
     public partial class Form1 : Form
     {
+        //stuff so you can move the window around
+        [DllImport("user32.dll")]
+        public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        [DllImport("user32.dll")]
+        public static extern bool ReleaseCapture();
+        public const int WM_NCLBUTTONDOWN = 0xA1;
+        public const int HT_CAPTION = 0x2;
+
+        //initializing variables
         private Snessocket Snessocket;
         private bool isAttached = false;
         private string deviceUse = "";
@@ -91,37 +102,6 @@ namespace smk_tt_tool
                     string json = JsonSerializer.Serialize(defaultData, new JsonSerializerOptions { WriteIndented = true });
                     File.WriteAllText(filePath, json);
                 }
-            }
-        }
-
-        private string CompareLapFromJson(int id, int lapid, int comp)
-        {
-            var json = File.ReadAllText($"data/{currentCourse}.json");
-            var data = JsonSerializer.Deserialize<Dictionary<string, CourseData>>(json);
-            var courseData = data[currentCourse];
-            string result = "";
-
-            if (courseData.Races.Count > 0)
-            {
-                int diff = Math.Abs(courseData.Races[id - 1].Laps[lapid] - comp);
-                if (courseData.Races[id - 1].Laps[lapid] < comp)
-                {
-                    result += "+";
-                }
-                else if (diff == courseData.Races[id - 1].Laps[lapid])
-                {
-                    diff = 0;
-                }
-                else
-                {
-                    result += "-";
-                }
-                result += CsToStr(diff);
-                return result;
-            }
-            else
-            {
-                return $"{CsToStr(0)}";
             }
         }
 
@@ -268,37 +248,8 @@ namespace smk_tt_tool
                     AddRaceToJson(racer, finishtime, LapSplits[0], LapSplits[1], LapSplits[2], LapSplits[3], LapSplits[4]);
                 }
 
-                string lapdeltas = "";
-
-                //segment delta from 5lap pr
-                //only get 5lap pr deltas if not in retry screen
-                if (lastRaceOptions == 0x00)
-                {
-                    var json = File.ReadAllText($"data/{currentCourse}.json");
-                    var jsondata = JsonSerializer.Deserialize<Dictionary<string, CourseData>>(json);
-                    var courseData = jsondata[currentCourse];
-
-                    for (int i = 0; i < 5; i++)
-                    {
-                        lapdeltas += $"{CompareLapFromJson(courseData.Pr.Fivelap, i, LapSplits[i])}\n";
-                    }
-                    if (lapreached > 5)
-                    {
-                        int totaldelta = Math.Abs(courseData.Races[courseData.Pr.Fivelap-1].Racetime - cs5);
-                        if (courseData.Races[courseData.Pr.Fivelap - 1].Racetime < cs5)
-                        {
-                            lapdeltas += "\n+";
-                        } else
-                        {
-                            lapdeltas += "\n-";
-                        }
-                            lapdeltas += $"{CsToStr(totaldelta)}";
-                    }
-                }
-
                 this.Invoke((Action)(() =>
                 {
-                    label5.Text = lapdeltas;
                     label4.Text = $"{currentCourse}";
                     label3.Text = $"{racer}";
                     label2.Text = $"LAP {Math.Clamp(lapreached, 0, 5)}";
@@ -306,28 +257,6 @@ namespace smk_tt_tool
                 }));
 
                 lastRaceOptions = RaceOptions;
-            }
-        }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-            if (Snessocket.Connected() && !isAttached)
-            {
-                string[] devices = Snessocket.GetDevices();
-                deviceUse = devices[0];
-
-                Snessocket.Attach(deviceUse);
-                Snessocket.Name("smk-tt-tool");
-                string[] infos = Snessocket.GetInfo();
-                foreach (string info in infos)
-                {
-                    Debug.WriteLine(info);
-                }
-                if (infos.Length > 0)
-                {
-                    isAttached = true;
-                    button1.Visible = false;
-                }
             }
         }
 
@@ -346,6 +275,42 @@ namespace smk_tt_tool
                     await Task.Delay(10);
                 }
             });
+        }
+
+        private void Form1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                ReleaseCapture();
+                SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+            }
+        }
+
+        private void connectToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (Snessocket.Connected() && !isAttached)
+            {
+                string[] devices = Snessocket.GetDevices();
+                deviceUse = devices[0];
+
+                Snessocket.Attach(deviceUse);
+                Snessocket.Name("smk-tt-tool");
+                string[] infos = Snessocket.GetInfo();
+                foreach (string info in infos)
+                {
+                    Debug.WriteLine(info);
+                }
+                if (infos.Length > 0)
+                {
+                    isAttached = true;
+                    appContextMenu.Items[0].Enabled = false;
+                }
+            }
+        }
+
+        private void exitToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            this.Close();
         }
     }
 }
