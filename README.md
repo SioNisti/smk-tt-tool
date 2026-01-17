@@ -12,5 +12,3 @@ Todo:
 - make sure the loaded rom is smk and check the region
 - implement regions to json
 - load and show pr from json
-- show split delta to pr
-- show best laps and their combined sum of best 5lap
