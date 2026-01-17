@@ -29,17 +29,20 @@ namespace smk_tt_tool
         };
         private string currentCourse = "MC3";
         private int lastRaceOptions = 0xFF; //set to 0 for testing.
+        public string toClipboard = "";
+
+        public string jsonPath = @"attempt-data.json";
 
         public Form1()
         {
             InitializeComponent();
-            CheckJson();
         }
+        //thing to convert given value to 0 if it's 0xFF (empty lap time)
         int Normalize(int value)
         {
             return (value == 0xFF) ? 0 : value;
         }
-
+        //convert the bytes into a nice string
         public string BytesToStr(int cs, int s, int m)
         {
             int lapcs = Normalize(cs);
@@ -47,6 +50,7 @@ namespace smk_tt_tool
             int lapm = Normalize(m);
             return $"{lapm:X}'{laps:X2}\"{lapcs:X2}";
         }
+        //converts given string into centiseconds
         int StrToCs(string timeString)
         {
             int total = 0;
@@ -63,7 +67,7 @@ namespace smk_tt_tool
 
             return total;
         }
-
+        //convert centiseconds to a nice string
         string CsToStr(int cs)
         {
             int minutes = cs / 6000;
@@ -72,42 +76,54 @@ namespace smk_tt_tool
 
             return $"{minutes}'{seconds:00}\"{cs2:00}";
         }
-
+        //check if the json exists and that it's good.
         private void CheckJson()
         {
-            //check if the jsons exist. if they dont, make them.
+            if (!File.Exists(jsonPath))
+            {
+                File.WriteAllText(jsonPath, "{}");
+            }
 
+            Dictionary<string, CourseData> allData;
+
+            if (File.Exists(jsonPath))
+            {
+                string json = File.ReadAllText(jsonPath);
+                allData = JsonSerializer.Deserialize<Dictionary<string, CourseData>>(json) ?? new Dictionary<string, CourseData>();
+            }
+            else
+            {
+                allData = new Dictionary<string, CourseData>();
+            }
+
+            //check that all the courses are in the json. if not, add them.
+            bool update = false;
             foreach (var course in courses)
             {
-                string filePath = $"data/{course}.json";
-                if (!Directory.Exists("data/"))
+                if (!allData.ContainsKey(course))
                 {
-                    Directory.CreateDirectory("data");
-                }
-
-                if (!File.Exists(filePath))
-                {
-                    var defaultData = new Dictionary<string, CourseData>
+                    allData[course] = new CourseData
                     {
-                        [course] = new CourseData
-                        {
-                            Finishedraces = 0,
-                            Attempts = 0,
-                            Pr = new PersonalRecords { Fivelap = 0, Flap = 0 },
-                            Bestlaps = [0, 0, 0, 0, 0],
-                            Races = new List<Race>()
-                        }
+                        Finishedraces = 0,
+                        Attempts = 0,
+                        Pr = new PersonalRecords { Fivelap = 0, Flap = 0 },
+                        Bestlaps = [0, 0, 0, 0, 0],
+                        Races = new List<Race>()
                     };
-
-                    string json = JsonSerializer.Serialize(defaultData, new JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(filePath, json);
+                    update = true;
                 }
+            }
+
+            if (update)
+            {
+                string json = JsonSerializer.Serialize(allData, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(jsonPath, json);
             }
         }
 
         private void AddRaceToJson(string character, int racetime, int lap1, int lap2, int lap3, int lap4, int lap5)
         {
-            var json = File.ReadAllText($"data/{currentCourse}.json");
+            var json = File.ReadAllText(jsonPath);
             var data = JsonSerializer.Deserialize<Dictionary<string, CourseData>>(json);
 
             int[] laps = { lap1, lap2, lap3, lap4, lap5 };
@@ -171,14 +187,14 @@ namespace smk_tt_tool
             }
 
             json = JsonSerializer.Serialize(data, new JsonSerializerOptions() { WriteIndented = true });
-            File.WriteAllText($"data/{currentCourse}.json", json);
+            File.WriteAllText(jsonPath, json);
         }
 
         private void ReadMemory()
         {
             if (isAttached)
             {
-                //lap times
+                //lap times from ram
                 var data = new byte[30];
                 data = Snessocket.GetAddress((0xF50000 + MemoryAddresses.ntsc["ttLapTimes"]), (uint)30);
 
@@ -236,8 +252,8 @@ namespace smk_tt_tool
                     formatted5 = totalTime;
                 }
 
-                //check if at the retry screen is up and at least one lap was finished.
-                if (lastRaceOptions == 0x00 && RaceOptions == 0xFF && lapreached > 1)
+                //check if at the retry screen is up and timer is higher than 1s
+                if (lastRaceOptions == 0x00 && RaceOptions == 0xFF && StrToCs(totalTime) > 100)// && lapreached > 1) and at least one lap was finished.
                 {
                     int finishtime = cs5;
                     if (finishtime == 0)
@@ -250,23 +266,26 @@ namespace smk_tt_tool
 
                 this.Invoke((Action)(() =>
                 {
-                    label4.Text = $"{currentCourse}";
-                    label3.Text = $"{racer}";
-                    label2.Text = $"LAP {Math.Clamp(lapreached, 0, 5)}";
-                    label1.Text = $"L1 {CsToStr(LapSplits[0])}\nL2 {CsToStr(LapSplits[1])}\nL3 {CsToStr(LapSplits[2])}\nL4 {CsToStr(LapSplits[3])}\nL5 {CsToStr(LapSplits[4])}\n\nTOTAL {formatted5}";
+                    raceSplitsLabel.Text = $"L1 {CsToStr(LapSplits[0])}\nL2 {CsToStr(LapSplits[1])}\nL3 {CsToStr(LapSplits[2])}\nL4 {CsToStr(LapSplits[3])}\nL5 {CsToStr(LapSplits[4])}\nTOTAL {formatted5}";
+                    courseLabel.Text = $"{currentCourse}"; 
+                    attemptLabel.Text = getAttempts(currentCourse);
+                    prLabel.Text = $"5lap: {get5lapPrInfo(currentCourse)}\nFlap: {getFlapPrInfo(currentCourse)}";
                 }));
 
+                toClipboard = $"{CsToStr(LapSplits[0])} {CsToStr(LapSplits[1])} {CsToStr(LapSplits[2])} {CsToStr(LapSplits[3])} {CsToStr(LapSplits[4])}";
                 lastRaceOptions = RaceOptions;
             }
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private async void Form1_Load(object sender, EventArgs e)
         {
             Snessocket = new Snessocket();
             Snessocket.wsConnect();
 
+            CheckJson();
+
             //thread memory reading and such so the gui wont get interrupted constantly.
-            Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 while (true)
                 {
@@ -303,7 +322,8 @@ namespace smk_tt_tool
                 if (infos.Length > 0)
                 {
                     isAttached = true;
-                    appContextMenu.Items[0].Enabled = false;
+                    appContextMenu.Items[0].Enabled = false; //gray out "connect"
+                    appContextMenu.Items[1].Enabled = true; //ungray out "copy times"
                 }
             }
         }
@@ -311,6 +331,76 @@ namespace smk_tt_tool
         private void exitToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             this.Close();
+        }
+
+        private void copyToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Clipboard.SetText(toClipboard);
+        }
+
+        public bool validateCourse(string course)
+        {
+            int pos = Array.IndexOf(courses, course);
+            if (pos > -1)
+            {
+                return true;
+            } else
+            {
+                return false;
+            }
+        }
+
+        public string getAttempts(string course)
+        {
+            if (validateCourse(course))
+            {
+                var json = File.ReadAllText(jsonPath);
+                var data = JsonSerializer.Deserialize<Dictionary<string, CourseData>>(json);
+
+                return $"{data[course].Finishedraces}/{data[course].Attempts}";
+            } else
+            {
+                return "0/0";
+            }
+        }
+
+        public string get5lapPrInfo(string course)
+        {
+            if (validateCourse(course))
+            {
+                var json = File.ReadAllText(jsonPath);
+                var data = JsonSerializer.Deserialize<Dictionary<string, CourseData>>(json);
+                var courseData = data[course];
+                int id = courseData.Pr.Fivelap;
+                Race prRace = courseData.Races.FirstOrDefault(r => r.Id == id);
+
+                if (prRace == null) return "0'00\"00";
+
+                return CsToStr(prRace.Racetime);
+            } else
+            {
+                return "0'00\"00";
+            }
+        }
+
+        public string getFlapPrInfo(string course)
+        {
+            if (validateCourse(course))
+            {
+                var json = File.ReadAllText(jsonPath);
+                var data = JsonSerializer.Deserialize<Dictionary<string, CourseData>>(json);
+                var courseData = data[course];
+                int id = courseData.Pr.Flap;
+                Race prRace = courseData.Races.FirstOrDefault(r => r.Id == id);
+                if (prRace == null) return "0'00\"00";
+                List<int> prLaps = prRace.Laps.ToList();
+
+                return CsToStr(prLaps.Min());
+            }
+            else
+            {
+                return "0'00\"00";
+            }
         }
     }
 }

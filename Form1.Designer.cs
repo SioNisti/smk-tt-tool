@@ -30,101 +30,106 @@
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
-            label1 = new Label();
+            raceSplitsLabel = new Label();
             appContextMenu = new ContextMenuStrip(components);
             connectToolStripMenuItem = new ToolStripMenuItem();
+            copyToolStripMenuItem = new ToolStripMenuItem();
             exitToolStripMenuItem1 = new ToolStripMenuItem();
-            label2 = new Label();
-            label3 = new Label();
-            label4 = new Label();
+            courseLabel = new Label();
+            attemptLabel = new Label();
+            prLabel = new Label();
             appContextMenu.SuspendLayout();
             SuspendLayout();
             // 
-            // label1
+            // raceSplitsLabel
             // 
-            label1.AutoSize = true;
-            label1.ContextMenuStrip = appContextMenu;
-            label1.Font = new Font("Cascadia Mono", 22F, FontStyle.Regular, GraphicsUnit.Pixel, 0);
-            label1.ForeColor = Color.White;
-            label1.Location = new Point(12, 38);
-            label1.Name = "label1";
-            label1.Size = new Size(182, 203);
-            label1.TabIndex = 0;
-            label1.Text = "L1 0'00\"00\r\nL2 0'00\"00\r\nL3 0'00\"00\r\nL4 0'00\"00\r\nL5 0'00\"00\r\n\r\nTOTAL 0'00\"00";
-            label1.TextAlign = ContentAlignment.MiddleRight;
-            label1.MouseDown += Form1_MouseDown;
+            raceSplitsLabel.AutoSize = true;
+            raceSplitsLabel.ContextMenuStrip = appContextMenu;
+            raceSplitsLabel.Font = new Font("Cascadia Mono", 22F, FontStyle.Regular, GraphicsUnit.Pixel, 0);
+            raceSplitsLabel.ForeColor = Color.White;
+            raceSplitsLabel.Location = new Point(12, 9);
+            raceSplitsLabel.Name = "raceSplitsLabel";
+            raceSplitsLabel.Size = new Size(182, 174);
+            raceSplitsLabel.TabIndex = 0;
+            raceSplitsLabel.Text = "L1 0'00\"00\r\nL2 0'00\"00\r\nL3 0'00\"00\r\nL4 0'00\"00\r\nL5 0'00\"00\r\nTOTAL 0'00\"00";
+            raceSplitsLabel.TextAlign = ContentAlignment.MiddleRight;
+            raceSplitsLabel.MouseDown += Form1_MouseDown;
             // 
             // appContextMenu
             // 
-            appContextMenu.Items.AddRange(new ToolStripItem[] { connectToolStripMenuItem, exitToolStripMenuItem1 });
+            appContextMenu.Items.AddRange(new ToolStripItem[] { connectToolStripMenuItem, copyToolStripMenuItem, exitToolStripMenuItem1 });
             appContextMenu.Name = "appContextMenu";
-            appContextMenu.Size = new Size(120, 48);
+            appContextMenu.Size = new Size(137, 70);
             // 
             // connectToolStripMenuItem
             // 
             connectToolStripMenuItem.Name = "connectToolStripMenuItem";
-            connectToolStripMenuItem.Size = new Size(119, 22);
+            connectToolStripMenuItem.Size = new Size(136, 22);
             connectToolStripMenuItem.Text = "Connect";
             connectToolStripMenuItem.Click += connectToolStripMenuItem_Click;
+            // 
+            // copyToolStripMenuItem
+            // 
+            copyToolStripMenuItem.Enabled = false;
+            copyToolStripMenuItem.Name = "copyToolStripMenuItem";
+            copyToolStripMenuItem.Size = new Size(136, 22);
+            copyToolStripMenuItem.Text = "Copy Times";
+            copyToolStripMenuItem.Click += copyToolStripMenuItem_Click;
             // 
             // exitToolStripMenuItem1
             // 
             exitToolStripMenuItem1.Name = "exitToolStripMenuItem1";
-            exitToolStripMenuItem1.Size = new Size(119, 22);
+            exitToolStripMenuItem1.Size = new Size(136, 22);
             exitToolStripMenuItem1.Text = "Exit";
             exitToolStripMenuItem1.Click += exitToolStripMenuItem1_Click;
             // 
-            // label2
+            // courseLabel
             // 
-            label2.AutoSize = true;
-            label2.ContextMenuStrip = appContextMenu;
-            label2.Font = new Font("Cascadia Mono", 22F, FontStyle.Regular, GraphicsUnit.Pixel, 0);
-            label2.ForeColor = Color.White;
-            label2.Location = new Point(116, 9);
-            label2.Name = "label2";
-            label2.Size = new Size(78, 29);
-            label2.TabIndex = 2;
-            label2.Text = "Lap 0";
-            label2.MouseDown += Form1_MouseDown;
+            courseLabel.AutoSize = true;
+            courseLabel.ContextMenuStrip = appContextMenu;
+            courseLabel.Font = new Font("Cascadia Mono", 22F, FontStyle.Regular, GraphicsUnit.Pixel, 0);
+            courseLabel.ForeColor = Color.White;
+            courseLabel.Location = new Point(12, 205);
+            courseLabel.Name = "courseLabel";
+            courseLabel.Size = new Size(52, 29);
+            courseLabel.TabIndex = 4;
+            courseLabel.Text = "MC3";
+            courseLabel.MouseDown += Form1_MouseDown;
             // 
-            // label3
+            // attemptLabel
             // 
-            label3.AutoSize = true;
-            label3.ContextMenuStrip = appContextMenu;
-            label3.Font = new Font("Cascadia Mono", 22F, FontStyle.Regular, GraphicsUnit.Pixel, 0);
-            label3.ForeColor = Color.White;
-            label3.Location = new Point(12, 241);
-            label3.Name = "label3";
-            label3.Size = new Size(78, 29);
-            label3.TabIndex = 3;
-            label3.Text = "Mario";
-            label3.TextAlign = ContentAlignment.MiddleCenter;
-            label3.MouseDown += Form1_MouseDown;
+            attemptLabel.ContextMenuStrip = appContextMenu;
+            attemptLabel.Font = new Font("Cascadia Mono", 22F, FontStyle.Regular, GraphicsUnit.Pixel, 0);
+            attemptLabel.ForeColor = Color.White;
+            attemptLabel.Location = new Point(64, 204);
+            attemptLabel.Name = "attemptLabel";
+            attemptLabel.Size = new Size(130, 29);
+            attemptLabel.TabIndex = 5;
+            attemptLabel.Text = "0/0";
+            attemptLabel.TextAlign = ContentAlignment.MiddleRight;
             // 
-            // label4
+            // prLabel
             // 
-            label4.AutoSize = true;
-            label4.ContextMenuStrip = appContextMenu;
-            label4.Font = new Font("Cascadia Mono", 22F, FontStyle.Regular, GraphicsUnit.Pixel, 0);
-            label4.ForeColor = Color.White;
-            label4.Location = new Point(12, 9);
-            label4.Name = "label4";
-            label4.Size = new Size(52, 29);
-            label4.TabIndex = 4;
-            label4.Text = "MC3";
-            label4.MouseDown += Form1_MouseDown;
+            prLabel.AutoSize = true;
+            prLabel.Font = new Font("Cascadia Mono", 22F, FontStyle.Regular, GraphicsUnit.Pixel);
+            prLabel.ForeColor = Color.White;
+            prLabel.Location = new Point(12, 234);
+            prLabel.Name = "prLabel";
+            prLabel.Size = new Size(182, 58);
+            prLabel.TabIndex = 6;
+            prLabel.Text = "5lap: 0'00\"00\r\nFlap: 0'00\"00";
             // 
             // Form1
             // 
-            AutoScaleDimensions = new SizeF(7F, 15F);
-            AutoScaleMode = AutoScaleMode.Font;
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            AutoScaleMode = AutoScaleMode.Dpi;
             BackColor = Color.Black;
-            ClientSize = new Size(212, 291);
+            ClientSize = new Size(208, 309);
             ContextMenuStrip = appContextMenu;
-            Controls.Add(label4);
-            Controls.Add(label3);
-            Controls.Add(label2);
-            Controls.Add(label1);
+            Controls.Add(prLabel);
+            Controls.Add(attemptLabel);
+            Controls.Add(courseLabel);
+            Controls.Add(raceSplitsLabel);
             FormBorderStyle = FormBorderStyle.None;
             Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "Form1";
@@ -138,12 +143,13 @@
 
         #endregion
 
-        private Label label1;
-        private Label label2;
-        private Label label3;
-        private Label label4;
+        private Label raceSplitsLabel;
+        private Label courseLabel;
         private ContextMenuStrip appContextMenu;
         private ToolStripMenuItem connectToolStripMenuItem;
         private ToolStripMenuItem exitToolStripMenuItem1;
+        private ToolStripMenuItem copyToolStripMenuItem;
+        private Label attemptLabel;
+        private Label prLabel;
     }
 }
