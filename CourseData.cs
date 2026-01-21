@@ -31,5 +31,4 @@ namespace smk_tt_tool
         public int Racetime { get; set; }
         public int[] Laps { get; set; } = [0, 0, 0, 0, 0];
     }
-
 }

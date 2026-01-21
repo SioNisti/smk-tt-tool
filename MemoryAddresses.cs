@@ -18,7 +18,10 @@ namespace mkd2snesv2
             ["ttLapTimes"] = 0xF33, //the race time as a lap was completed
             ["P1Racer"] = 0x1012, //what character player 1 is
             ["P2Racer"] = 0x1112, //what character player 2 is
-            ["InRaceOptions"] = 0xFCF, //the menu with change char/course, retry, end. 0 no, FF yes
+
+            ["GameMode"] = 0x2C, //4 = TT
+            ["ScreenMode"] = 0x36, //2 = in race
+            ["pausa"] = 0x162, //00 = race, 02 = give up, 03 = pause menu
         };
     }
 }
