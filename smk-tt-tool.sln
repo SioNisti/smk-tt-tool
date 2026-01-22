@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36414.22 d17.14
+VisualStudioVersion = 17.14.36414.22
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "smk-tt-tool", "smk-tt-tool.csproj", "{BFDF21F9-833C-44FD-9EEA-8F7763202C6B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SuperVision", "..\SuperVision\SuperVision.csproj", "{9E5546DF-E198-42F5-AD81-21586F19546D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{BFDF21F9-833C-44FD-9EEA-8F7763202C6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BFDF21F9-833C-44FD-9EEA-8F7763202C6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BFDF21F9-833C-44FD-9EEA-8F7763202C6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E5546DF-E198-42F5-AD81-21586F19546D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E5546DF-E198-42F5-AD81-21586F19546D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E5546DF-E198-42F5-AD81-21586F19546D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E5546DF-E198-42F5-AD81-21586F19546D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
